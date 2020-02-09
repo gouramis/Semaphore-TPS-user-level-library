@@ -8,7 +8,16 @@ mutedobjs := queue.o \
 # General gcc options
 CC := gcc
 CFLAGS	:= -Wall -Wextra -Werror
+# Verbose flag
+ifneq ($(V),1)
+Q = @
+endif
+# Debug Flag
+ifneq ($(D),1)
+CFLAGS += -O2
+else
 CFLAGS  += -g
+endif
 # Include dependencies
 deps := $(patsubst %.o,%.d,$(objs) $(mutedobjs))
 -include $(deps)
@@ -17,12 +26,12 @@ DEPFLAGS = -MMD -MF $(@:.o=.d)
 # Rule for libuthread.a
 libuthread.a: $(objs) $(mutedobjs)
 	@echo "CC $@"
-	ar rcs $@ $^
+	$(Q)ar rcs $@ $^
 # Generic rule for compiling objects
 %.o: %.c
 	@echo "CC $@"
-	$(CC) $(CFLAGS) -c -o $@ $< $(DEPFLAGS)
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $< $(DEPFLAGS)
 # Cleaning rule
 clean:
 	@echo "CLEAN"
-	rm -rf $(objs) $(deps)
+	$(Q)rm -f $(objs) $(deps)

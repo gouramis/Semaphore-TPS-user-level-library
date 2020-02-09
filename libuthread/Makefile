@@ -11,6 +11,7 @@ CFLAGS	:= -Wall -Wextra -Werror
 # Verbose flag
 ifneq ($(V),1)
 Q = @
+V = 0
 endif
 # Debug Flag
 ifneq ($(D),1)

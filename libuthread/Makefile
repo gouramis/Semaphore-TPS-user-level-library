@@ -2,6 +2,7 @@
 lib := libuthread.a
 all: $(lib)
 objs := sem.o \
+		tps.o
 		#add tps.c later
 mutedobjs := queue.o \
 			 thread.o

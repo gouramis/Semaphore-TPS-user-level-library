@@ -51,7 +51,6 @@ static void segv_handler(int sig, siginfo_t *si,
 	/*
 	 * Iterate through all the TPS areas and find if p_fault matches one of them
 	 */
-	 //??
 	struct page_struct *guilty_page = NULL;
 	queue_iterate(tps_queue, find_tps_area, p_fault, (void**)&guilty_page);
 	if (guilty_page)

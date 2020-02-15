@@ -1,2 +1,9 @@
 libuthread.a
+/libuthread/*.d
+/libuthread/*.o
+!/libuthread/thread.o
+!/libuthread/queue.o
+/progs/*.d
+/progs/*.o
+/progs/*.x
 

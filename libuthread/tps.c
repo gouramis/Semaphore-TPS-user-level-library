@@ -64,6 +64,8 @@ static void segv_handler(int sig, siginfo_t *si,
 }
 int tps_init(int segv)
 {
+	enter_critical_section();
+	if (tps_queue) return -1;
 	if (segv) {
 		struct sigaction sa;
 		sigemptyset(&sa.sa_mask);
@@ -74,6 +76,7 @@ int tps_init(int segv)
 	}
 	//create static queue to hold mem tps_queue
 	tps_queue = queue_create();
+	exit_critical_section();
 	return 0;
 }
 

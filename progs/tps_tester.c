@@ -67,7 +67,7 @@ static void* tps_create_test_thread(void* arg) {
 }
 static int tps_create_test(void) {
 	pthread_t tid;
-	pthread_create(&tid, NULL, tps_create_test_thread, NULL);
+	assert(0 == pthread_create(&tid, NULL, tps_create_test_thread, NULL));
 	pthread_join(tid, NULL);
 	printf("Completed tps_create_test\n");
 	return 0;

@@ -110,6 +110,7 @@ int tps_create(void)
 int tps_destroy(void)
 {
 	enter_critical_section();
+	if (!tps_queue) return -1;
 	pthread_t tid = pthread_self();
 	//queue iterate on tid
 	tps* existing_tps = NULL;

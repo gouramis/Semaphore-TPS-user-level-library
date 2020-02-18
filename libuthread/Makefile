@@ -2,10 +2,10 @@
 lib := libuthread.a
 all: $(lib)
 objs := sem.o \
-		tps.o
-		#add tps.c later
-mutedobjs := queue.o \
-			 thread.o
+	tps.o
+mutedobjs := \
+	queue.o \
+	thread.o
 # General gcc options
 CC := gcc
 CFLAGS	:= -Wall -Wextra -Werror
@@ -26,7 +26,7 @@ deps := $(patsubst %.o,%.d,$(objs) $(mutedobjs))
 # Generate dependencies
 DEPFLAGS = -MMD -MF $(@:.o=.d)
 # Rule for libuthread.a
-libuthread.a: $(objs) $(mutedobjs)
+%.a: $(objs) $(mutedobjs)
 	@echo "CC $@"
 	$(Q)ar rcs $@ $^
 # Generic rule for compiling objects
@@ -36,4 +36,4 @@ libuthread.a: $(objs) $(mutedobjs)
 # Cleaning rule
 clean:
 	@echo "CLEAN"
-	$(Q)rm -f $(objs) $(deps)
+	$(Q)rm -f $(objs) $(deps) $(lib)

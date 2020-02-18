@@ -2,10 +2,10 @@
 lib := libuthread.a
 all: $(lib)
 objs := sem.o \
-		tps.o
-		#add tps.c later
-mutedobjs := queue.o \
-			 thread.o
+	tps.o
+mutedobjs := \
+	queue.o \
+	thread.o
 # General gcc options
 CC := gcc
 CFLAGS	:= -Wall -Wextra -Werror

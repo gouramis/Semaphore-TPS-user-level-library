@@ -1,5 +1,5 @@
 # ECS 150 Project 3
 
-# Semaphore API implementation
+## Semaphore API implementation
 
-# TPS API implementation
+## TPS API implementation

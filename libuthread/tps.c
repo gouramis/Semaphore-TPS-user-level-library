@@ -87,7 +87,7 @@ int tps_create(void)
 	pthread_t tid = pthread_self();
 	// Find out whether the current has a tps already
 	tps* existing_tps = NULL;
-	queue_iterate(tps_queue, find_tid, (void*)tid, (void**)existing_tps);
+	queue_iterate(tps_queue, find_tid, (void*)tid, (void**)&existing_tps);
 	// If we GET a page back, we already have a tps
 	if (existing_tps != NULL) return -1;
 	// Otherwise we allocate a tps
@@ -117,6 +117,7 @@ int tps_destroy(void)
 	// Make sure that the page actually exists:
 	if (existing_tps == NULL) return -1;
 	queue_delete(tps_queue, (void*)existing_tps);
+	tps_queue = NULL;
 	munmap(existing_tps->mem_page->page_address, TPS_SIZE);
 	free(existing_tps->mem_page);
 	free(existing_tps);

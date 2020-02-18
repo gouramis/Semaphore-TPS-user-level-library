@@ -8,7 +8,7 @@
 #include <tps.h>
 #include <sem.h>
 static pthread_t* threads;
-
+/*
 static void *corner_case_tc(void* arg){
 	enter_critical_section();
 	printf("'C' calls down\n");
@@ -45,9 +45,12 @@ static int sem_corner_case() {
 	pthread_join(threads[0], NULL);
 	return 0;
 }
+*/
 static void* tps_init_test_thread(void* arg){
 	assert(0 == tps_init(0));
 	assert(-1 == tps_init(0));
+	assert(0 == tps_create());
+	assert(0 == tps_destroy());
 	return 0;
 }
 
@@ -73,11 +76,35 @@ static int tps_create_test(void) {
 	return 0;
 }
 
+static void* tps_destroy_test_thread(void* arg) {
+	assert(-1 == tps_destroy());
+	assert(0 == tps_init(0));
+	assert(0 == tps_create());
+	assert(-1 == tps_create());
+	assert(0 == tps_destroy());
+	assert(-1 == tps_destroy());
+	return 0;
+}
+static int tps_destroy_test(void) {
+	pthread_t tid;
+	assert(0 == pthread_create(&tid, NULL, tps_destroy_test_thread, NULL));
+	pthread_join(tid, NULL);
+	printf("Completed tps_destroy_test_thread\n");
+	return 0;
+}
+static void* tps_read_test_thread(void* arg) {
+	
+}
+static int tps_read_test(void) {
+	
+}
 int main() {
-	tps_init_test();
 	tps_create_test();
+	tps_init_test();
+	tps_destroy_test();
+	
 	// Corner case needs a lot of work...
-	sem_corner_case();
+	// sem_corner_case();
 
 	return 0;
 }

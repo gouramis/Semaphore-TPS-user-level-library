@@ -64,8 +64,8 @@ static void segv_handler(int sig, siginfo_t *si,
 }
 int tps_init(int segv)
 {
-	enter_critical_section();
 	if (tps_queue) return -1;
+	enter_critical_section();
 	if (segv) {
 		struct sigaction sa;
 		sigemptyset(&sa.sa_mask);
@@ -89,7 +89,10 @@ int tps_create(void)
 	tps* existing_tps = NULL;
 	queue_iterate(tps_queue, find_tid, (void*)tid, (void**)&existing_tps);
 	// If we GET a page back, we already have a tps
-	if (existing_tps != NULL) return -1;
+	if (existing_tps != NULL) {
+		exit_critical_section();
+		return -1;
+	}
 	// Otherwise we allocate a tps
 	tps* new_tps = malloc(sizeof(tps));
 	// Allocate the page struct to hold the address and reference_counter
@@ -116,11 +119,17 @@ int tps_destroy(void)
 	tps* existing_tps = NULL;
 	queue_iterate(tps_queue, find_tid, (void*)tid, (void**)&existing_tps);
 	// Make sure that the page actually exists:
-	if (existing_tps == NULL) return -1;
+	if (existing_tps == NULL) {
+		exit_critical_section();
+		return -1;
+	}
+	// Disassociate the tps
 	queue_delete(tps_queue, (void*)existing_tps);
-	tps_queue = NULL;
-	munmap(existing_tps->mem_page->page_address, TPS_SIZE);
-	free(existing_tps->mem_page);
+	// If the tps has other threads referencing it, do not unmap tps
+	if (existing_tps->mem_page->reference_counter == 1){
+		munmap(existing_tps->mem_page->page_address, TPS_SIZE);
+		free(existing_tps->mem_page);
+	}
 	free(existing_tps);
 	exit_critical_section();
 	return 0;
@@ -139,7 +148,10 @@ int tps_read(size_t offset, size_t length, void *buffer)
 	tps* existing_tps = NULL;
 	queue_iterate(tps_queue, find_tid, (void*)tid, (void**)&existing_tps);
 	// Make sure the page actually exists:
-	if (existing_tps == NULL) return -1;
+	if (existing_tps == NULL) {
+		exit_critical_section();
+		return -1;
+	}
 	void* tps_address = existing_tps->mem_page->page_address;
 	mprotect(tps_address, TPS_SIZE, PROT_READ);
 	memcpy(buffer, tps_address + offset, length);
@@ -150,8 +162,6 @@ int tps_read(size_t offset, size_t length, void *buffer)
 
 int tps_write(size_t offset, size_t length, void *buffer)
 {
-	// TODO: Check if shared TPS
-	// Error checking:
 	if (buffer == NULL) return -1;
 	if ((length + offset) > TPS_SIZE){
 		return -1;
@@ -161,7 +171,10 @@ int tps_write(size_t offset, size_t length, void *buffer)
 	tps* existing_tps = NULL;
 	queue_iterate(tps_queue, find_tid, (void*)tid, (void**)&existing_tps);
 	// Make sure the page actually exists:
-	if (existing_tps == NULL) return -1;
+	if (existing_tps == NULL) {
+		exit_critical_section();
+		return -1;
+	}
 	// Do I need to perform a clone on the page?
 	if (existing_tps->mem_page->reference_counter > 1){
 		void *old_page_address = existing_tps->mem_page->page_address;

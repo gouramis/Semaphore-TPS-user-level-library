@@ -3,6 +3,7 @@
 programs := \
 	sem_count.x \
 	sem_buffer.x \
+	sem_simple.x \
 	sem_prime.x \
 	tps_simple.x \
 	tps_tester.x
@@ -85,4 +86,3 @@ clean:
 	$(Q)rm -rf $(objs) $(deps) $(programs)
 
 .PHONY: clean $(libuthread)
-

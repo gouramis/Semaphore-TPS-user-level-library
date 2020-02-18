@@ -26,8 +26,7 @@ deps := $(patsubst %.o,%.d,$(objs) $(mutedobjs))
 # Generate dependencies
 DEPFLAGS = -MMD -MF $(@:.o=.d)
 # Rule for libuthread.a
-# TODO: make this generic with %.a
-libuthread.a: $(objs) $(mutedobjs)
+%.a: $(objs) $(mutedobjs)
 	@echo "CC $@"
 	$(Q)ar rcs $@ $^
 # Generic rule for compiling objects
@@ -35,7 +34,6 @@ libuthread.a: $(objs) $(mutedobjs)
 	@echo "CC $@"
 	$(Q)$(CC) $(CFLAGS) -c -o $@ $< $(DEPFLAGS)
 # Cleaning rule
-# TODO: Also remove library (libuthread.a)
 clean:
 	@echo "CLEAN"
-	$(Q)rm -f $(objs) $(deps)
+	$(Q)rm -f $(objs) $(deps) $(lib)

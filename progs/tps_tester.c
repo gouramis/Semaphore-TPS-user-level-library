@@ -175,6 +175,27 @@ static void tps_access_without_creation_test(void){
 	assert(-1 == tps_write(0,TPS_SIZE,"Hello"));
 	assert(-1 == tps_read(0,TPS_SIZE,"Hello"));
 }
+//static sem_t sem1, sem2;
+static void *thread1(__attribute__((unused)) void *arg){
+	// this thread will create a tps, write into it, and test
+	// if it reads the same message
+	char *buf = malloc(TPS_SIZE);
+	static char *msg = "hello";
+	tps_create();
+	tps_write(0, TPS_SIZE, msg);
+	/* Read from TPS and make sure it contains the message */
+	memset(buf, 0, TPS_SIZE);
+	tps_read(0, TPS_SIZE, buf);
+	assert(!memcmp(msg, buf, TPS_SIZE));
+	free(buf);
+	tps_destroy();
+	return NULL;
+}
+static void create_thread(void){
+	pthread_t tid;
+	pthread_create(&tid, NULL, thread1, NULL);
+	pthread_join(tid, NULL);
+}
 int main() {
 	assert(0 == tps_init(0));
 	tps_create_test();
@@ -184,6 +205,7 @@ int main() {
 	tps_write_test();
 	tps_clone_test();
 	tps_access_without_creation_test();
+	create_thread();
 	// -- Semaphore Testing -- //
 	// Corner case needs a lot of work...
 	// sem_corner_case();

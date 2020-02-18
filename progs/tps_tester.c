@@ -162,16 +162,19 @@ static void* tps_clone_test_threadA(void* arg) {
 }
 static int tps_clone_test(void) {
 	sem_t sem1 = sem_create(0);
-	assert(0 == pthread_create(&(clone_threads[0]), NULL, 
+	assert(0 == pthread_create(&(clone_threads[0]), NULL,
 		tps_clone_test_threadA, (void*)&sem1));
-	assert(0 == pthread_create(&(clone_threads[1]), NULL, 
+	assert(0 == pthread_create(&(clone_threads[1]), NULL,
 		tps_clone_test_threadB, (void*)&sem1));
 	pthread_join(clone_threads[0], NULL);
 	sem_destroy(sem1);
 	printf("Completed tps_clone_test\n");
 	return 0;
 }
-
+static void tps_access_without_creation_test(void){
+	assert(-1 == tps_write(0,TPS_SIZE,"Hello"));
+	assert(-1 == tps_read(0,TPS_SIZE,"Hello"));
+}
 int main() {
 	assert(0 == tps_init(0));
 	tps_create_test();
@@ -180,6 +183,7 @@ int main() {
 	tps_read_test();
 	tps_write_test();
 	tps_clone_test();
+	tps_access_without_creation_test();
 	// -- Semaphore Testing -- //
 	// Corner case needs a lot of work...
 	// sem_corner_case();

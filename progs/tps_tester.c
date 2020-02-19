@@ -8,44 +8,32 @@
 #include <tps.h>
 #include <sem.h>
 // static pthread_t* threads;
-/*
-static void *corner_case_tc(void* arg){
-	enter_critical_section();
-	printf("'C' calls down\n");
-	sem_down(*(sem_t*)arg);
-	printf("'C' dies\n");
-	exit_critical_section();
-	return 0;
+static sem_t sem1;
+static pthread_t tid[3];
+static void *corner_case_tc(__attribute__((unused)) void *arg){
+	sem_down(sem1);
+	return NULL;
 }
-static void *corner_case_tb(void* arg){
-	enter_critical_section();
-	printf("'B' calls up\n");
-	sem_up(*(sem_t*)arg);
-	pthread_join(threads[2], NULL);
-	printf("Returned to B\n");
-	exit_critical_section();
-	return 0;
+static void *corner_case_tb(__attribute__((unused)) void *arg){
+	sem_up(sem1);
+	return NULL;
 }
-static void *corner_case_ta(void* arg){
-	enter_critical_section();
-	// Get blocked on the semaphore
-	printf("'A' gets blocked...\n");
-	sem_down(*(sem_t*)arg);
-	pthread_join(threads[1], NULL);
-	printf("Returns to 'A'\n");
-	exit_critical_section();
-	return 0;
+static void *corner_case_ta(__attribute__((unused)) void *arg){
+	sem_down(sem1);
+	printf("should hang here\n");
+	return NULL;
 }
-static int sem_corner_case() {
-	sem_t sem1 = sem_create(0);
-	threads = malloc(sizeof(pthread_t)*3);
-	pthread_create(&threads[0], NULL, corner_case_ta, (void*)&sem1);
-	pthread_create(&threads[1], NULL, corner_case_tb, (void*)&sem1);
-	pthread_create(&threads[2], NULL, corner_case_tc, (void*)&sem1);
-	pthread_join(threads[0], NULL);
-	return 0;
+static void *sem_corner_case() {
+	sem1 = sem_create(0);
+	pthread_create(&tid[0], NULL, corner_case_ta, NULL);
+	pthread_create(&tid[1], NULL, corner_case_tb, NULL);
+	pthread_create(&tid[2], NULL, corner_case_tc, NULL);
+	pthread_join(tid[0], NULL);
+	pthread_join(tid[1], NULL);
+	pthread_join(tid[2], NULL);
+	return NULL;
 }
-*/
+
 static void* tps_init_test_thread(void* arg){
 	assert(-1 == tps_init(0));
 	assert(0 == tps_create());
@@ -175,7 +163,6 @@ static void tps_access_without_creation_test(void){
 	assert(-1 == tps_write(0,TPS_SIZE,"Hello"));
 	assert(-1 == tps_read(0,TPS_SIZE,"Hello"));
 }
-//static sem_t sem1, sem2;
 static void *thread1(__attribute__((unused)) void *arg){
 	// this thread will create a tps, write into it, and test
 	// if it reads the same message
@@ -183,7 +170,6 @@ static void *thread1(__attribute__((unused)) void *arg){
 	static char *msg = "hello";
 	tps_create();
 	tps_write(0, TPS_SIZE, msg);
-	/* Read from TPS and make sure it contains the message */
 	memset(buf, 0, TPS_SIZE);
 	tps_read(0, TPS_SIZE, buf);
 	assert(!memcmp(msg, buf, TPS_SIZE));
@@ -197,6 +183,7 @@ static void create_thread(void){
 	pthread_join(tid, NULL);
 }
 int main() {
+	// -- TPS Testing -- //
 	assert(0 == tps_init(0));
 	tps_create_test();
 	tps_init_test();
@@ -207,8 +194,7 @@ int main() {
 	tps_access_without_creation_test();
 	create_thread();
 	// -- Semaphore Testing -- //
-	// Corner case needs a lot of work...
-	// sem_corner_case();
+	sem_corner_case();
 
 	return 0;
 }

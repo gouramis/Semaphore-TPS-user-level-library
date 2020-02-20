@@ -11,18 +11,22 @@
 #include "queue.h"
 #include "thread.h"
 #include "tps.h"
-
+// Global tps queue
 static queue_t tps_queue;
-struct page_struct{
+// Struct representing the physical page in memory
+struct page_struct {
 	void* page_address;
+	// plus a counter representing the number of tps' referencing it
 	size_t reference_counter;
 };
+// Structure to hold the TPS, and inside it holds a page_struct
 typedef struct tps_struct {
 	struct page_struct *mem_page;
 	pthread_t tid;
 } tps;
 // Find the tps associated with tid @arg
-static int find_tid(void *data, void *arg) {
+static int find_tid(void *data, void *arg)
+{
 	tps *d = data;
 	pthread_t match = *(pthread_t*)arg;
 	if (d->tid == match) {
@@ -30,8 +34,9 @@ static int find_tid(void *data, void *arg) {
 	}
 	return 0;
 }
-
-static int find_tps_area(void* data, void* arg){
+// Finds the tps with the page_address matching arg
+static int find_tps_area(void* data, void* arg)
+{
 	tps *d = data;
 	if (d->mem_page->page_address == arg) {
 		return 1;
@@ -49,7 +54,7 @@ static void segv_handler(int sig, siginfo_t *si,
 	void *p_fault = (void*)((uintptr_t)si->si_addr & ~(TPS_SIZE - 1));
 
 	/*
-	 * Iterate through all the TPS areas and find if p_fault matches one of them
+	 * Iterate through all the TPS areas and check if p_fault matches one of them
 	 */
 	struct page_struct *guilty_page = NULL;
 	queue_iterate(tps_queue, find_tps_area, p_fault, (void**)&guilty_page);
@@ -82,7 +87,6 @@ int tps_init(int segv)
 
 int tps_create(void)
 {
-	// TODO: Check if this is a critical section
 	enter_critical_section();
 	pthread_t tid = pthread_self();
 	// Find out whether the current has a tps already
@@ -105,6 +109,7 @@ int tps_create(void)
 		MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	new_tps->tid = tid;
 	new_tps->mem_page->page_address = addr;
+	// Add our new tps to the tps_queue
 	queue_enqueue(tps_queue, new_tps);
 	exit_critical_section();
 	return 0;
@@ -123,13 +128,17 @@ int tps_destroy(void)
 		exit_critical_section();
 		return -1;
 	}
-	// Disassociate the tps
+	// Delete the tps from our queue
 	queue_delete(tps_queue, (void*)existing_tps);
 	// If the tps has other threads referencing it, do not unmap tps
 	if (existing_tps->mem_page->reference_counter == 1){
 		munmap(existing_tps->mem_page->page_address, TPS_SIZE);
 		free(existing_tps->mem_page);
+	} else {
+		// Let our counter know we are no longer referencing it
+		existing_tps->mem_page->reference_counter -= 1;
 	}
+	// Regardless of its references, free this TPS
 	free(existing_tps);
 	exit_critical_section();
 	return 0;
@@ -139,7 +148,6 @@ int tps_read(size_t offset, size_t length, void *buffer)
 {
 	// Error checking:
 	if (buffer == NULL) return -1;
-	// TODO: check if we need >=
 	if ((length + offset) > TPS_SIZE){
 		return -1;
 	}
@@ -153,8 +161,10 @@ int tps_read(size_t offset, size_t length, void *buffer)
 		return -1;
 	}
 	void* tps_address = existing_tps->mem_page->page_address;
+	// Temporarily give read access:
 	mprotect(tps_address, TPS_SIZE, PROT_READ);
 	memcpy(buffer, tps_address + offset, length);
+	// Revert to no read/write access
 	mprotect(tps_address, TPS_SIZE, PROT_NONE);
 	exit_critical_section();
 	return 0;
@@ -162,6 +172,7 @@ int tps_read(size_t offset, size_t length, void *buffer)
 
 int tps_write(size_t offset, size_t length, void *buffer)
 {
+	// Error checking:
 	if (buffer == NULL) return -1;
 	if ((length + offset) > TPS_SIZE){
 		return -1;
@@ -175,18 +186,24 @@ int tps_write(size_t offset, size_t length, void *buffer)
 		exit_critical_section();
 		return -1;
 	}
-	// Do I need to perform a clone on the page?
+	// Check if thread needs to perform a copy-on-write
 	if (existing_tps->mem_page->reference_counter > 1){
+		// Must perform copy on write:
 		void *old_page_address = existing_tps->mem_page->page_address;
-		// Copy:
+		// Map the new page in memory
 		void *addr = mmap(NULL, TPS_SIZE, PROT_WRITE,
 			MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		// Add read access to exisitng address
 		mprotect(old_page_address, TPS_SIZE, PROT_READ);
+		// Copy the old page to the new page
 		memcpy(addr, old_page_address, TPS_SIZE);
+		// Re-protect the old page and the new page
 		mprotect(addr, TPS_SIZE, PROT_NONE);
 		mprotect(old_page_address, TPS_SIZE, PROT_NONE);
+		// Remove our reference to the old page (current thread no longer
+		// pointing to the old page)
 		existing_tps->mem_page->reference_counter--;
+		// Allocate a new page struct for our tps
 		struct page_struct *new_page = malloc(sizeof(struct page_struct));
 		new_page->reference_counter = 1;
 		new_page->page_address = addr;
@@ -194,8 +211,11 @@ int tps_write(size_t offset, size_t length, void *buffer)
 	}
 	// Write:
 	void* tps_address = existing_tps->mem_page->page_address;
+	// Give us write privileges
 	mprotect(tps_address, TPS_SIZE, PROT_WRITE);
+	// Copy the data over
 	memcpy(tps_address + offset, buffer, length);
+	// Re-protect the page
 	mprotect(tps_address, TPS_SIZE, PROT_NONE);
 	exit_critical_section();
 	return 0;
@@ -228,7 +248,6 @@ int tps_clone(pthread_t tid)
 	// Associate myself with the new_tps
 	new_tps->tid = cur_tid;
 	queue_enqueue(tps_queue, new_tps);
-
 	exit_critical_section();
 	return 0;
 }

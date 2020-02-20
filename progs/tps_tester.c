@@ -7,7 +7,7 @@
 #include <thread.h>
 #include <tps.h>
 #include <sem.h>
-
+// tps_init_test - Tests init behavior with intentional failures
 static void* tps_init_test_thread(void* arg){
 	assert(-1 == tps_init(0));
 	assert(0 == tps_create());
@@ -21,6 +21,7 @@ static int tps_init_test(void) {
 	printf("Completed tps_init_test\n");
 	return 0;
 }
+// tps_create_test - Tests create behavior with intentional failures
 static void* tps_create_test_thread(void* arg) {
 	assert(0 == tps_create());
 	assert(-1 == tps_create());
@@ -34,6 +35,7 @@ static int tps_create_test(void) {
 	printf("Completed tps_create_test\n");
 	return 0;
 }
+// tps_read_test - tests read behavior and intentional failures
 static void* tps_read_test_thread(void* arg) {
 	char buf[1024];
 	assert(-1 == tps_read(1024, 512, buf));
@@ -56,6 +58,7 @@ static int tps_read_test(void) {
 	printf("Completed tps_read_test\n");
 	return 0;
 }
+// tps_write_test - tests read behavior and intentional failures
 static void* tps_write_test_thread(void* arg) {
 	char buf[1024];
 	assert(-1 == tps_write(1024, 512, buf));
@@ -78,6 +81,7 @@ static int tps_write_test(void) {
 	printf("Completed tps_write_test\n");
 	return 0;
 }
+// tps_destroy_test - tests read behavior and intentional failures
 static void* tps_destroy_test_thread(void* arg) {
 	assert(-1 == tps_destroy());
 	assert(-1 == tps_destroy());
@@ -93,6 +97,9 @@ static int tps_destroy_test(void) {
 	printf("Completed tps_destroy_test\n");
 	return 0;
 }
+// Complex test verifying the multi-threaded PROTECTION of the TPS between
+// threads. Uses three threads to verify correct cloning, writing,
+// and copy-on-write.
 static pthread_t clone_threads[3];
 static sem_t sem1, sem2;
 static void* tps_clone_test_threadC(void* arg) {
@@ -161,11 +168,13 @@ static int tps_clone_test(void) {
 	printf("Completed tps_clone_test\n");
 	return 0;
 }
+// Verifies that accessing a non-existant TPS fails
 static void tps_access_without_creation_test(void){
 	assert(-1 == tps_write(0,TPS_SIZE,"Hello"));
 	assert(-1 == tps_read(0,TPS_SIZE,"Hello"));
 	printf("Completed tps_access_without_creation_test\n");
 }
+// Verifies single thread write and read
 static void *simple_write_test_thread(__attribute__((unused)) void *arg){
 	// this thread will create a tps, write into it, and test
 	// if it reads the same message
@@ -186,6 +195,10 @@ static void simple_write_test(void){
 	pthread_join(tid, NULL);
 	printf("Completed simple_write_test\n");
 }
+// This test creates a child thread that clones a single TPS, reads,
+// then destroys it. This should not delete the actual shared TPS it points to,
+// and the cloned_delete_test_thread_master will verify that its tps is not
+// destroyed before it destroys it.
 static pthread_t clone_this_tps;
 static sem_t sem_master;
 static void* cloned_delete_test_thread_master(void* arg) {
@@ -212,23 +225,14 @@ static void* cloned_delete_test_thread(void* arg) {
 	assert(0 == tps_destroy());
 	return NULL;
 }
-// This function creates children threads that clone a single TPS, read,
-// then destroy it. This should not delete the actual shared TPS they point to,
-// and the cloned_delete_test_thread_master will verify that it's tps is not
-// destroyed before it destroys it.
 static void cloned_delete_test() {
 	// Create threads that clone a single tps and attempt to destroy their tps's
 	sem_master = sem_create(0);
 	pthread_create(&clone_this_tps, NULL, cloned_delete_test_thread_master,
 		NULL);
-	pthread_t child_pthreads[5];
-	for (int i = 0; i < 5; i++) {
-		pthread_create(&child_pthreads[i], NULL,
-			cloned_delete_test_thread, NULL);
-	}
-	for (int i = 0; i < 5; i++) {
-		pthread_join(child_pthreads[i], NULL);
-	}
+	pthread_t child_pthread;
+	pthread_create(&child_pthread, NULL, cloned_delete_test_thread, NULL);
+	pthread_join(child_pthread, NULL);
 	// Once a bunch of children have run, sem_up to unblock the master
 	sem_up(sem_master);
 	pthread_join(clone_this_tps, NULL);
@@ -246,6 +250,7 @@ void *__wrap_mmap(void *addr, size_t len, int prot, int flags, int fildes,
     latest_mmap_addr = __real_mmap(addr, len, prot, flags, fildes, off);
 	return latest_mmap_addr;
 }
+// Verifies the segfault handler and error message.
 static void* tps_prot_thread(void *arg){
 	assert(0 == tps_create());
 	char *tps_addr = latest_mmap_addr;

@@ -229,12 +229,18 @@ int tps_clone(pthread_t tid)
 	// Check if the current thread has a page or not
 	queue_iterate(tps_queue, find_tid, (void*)cur_tid, (void**)&existing_tps);
 	// if we get something back, cur_thread already has a TPS!
-	if (existing_tps != NULL) return -1;
+	if (existing_tps != NULL){
+		exit_critical_section();
+		return -1;
+	}
 	// Check if the new tid doesn't have a TPS
 	tps *src_page = NULL;
 	queue_iterate(tps_queue, find_tid, (void*)tid, (void**)&src_page);
 	// if we don't get anything back the page does not exist
-	if (src_page == NULL) return -1;
+	if (src_page == NULL){
+		exit_critical_section();
+		return -1;
+	}
 	// If we get here, we know cur_thread does NOT have a TPS and @TID
 	// DOES have a tps
 

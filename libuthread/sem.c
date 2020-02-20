@@ -29,8 +29,10 @@ int sem_destroy(sem_t sem)
 	if(sem == NULL || queue_length(sem->blocked_threads)) {
 		return -1;
 	}
+	enter_critical_section();
 	queue_destroy(sem->blocked_threads);
 	free(sem);
+	exit_critical_section();
 	return 0;
 }
 
@@ -83,6 +85,7 @@ int sem_getvalue(sem_t sem, int *sval)
 	if(sem->count > 0){
 		// If the count is positive, just set sval to the count.
 		*sval = sem->count;
+		exit_critical_section();
 		return 0;
 	}
 	if(sem->count == 0){

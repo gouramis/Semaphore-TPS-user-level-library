@@ -1,4 +1,4 @@
-This project was created by Cameron Fitzpatrick and Hunter Kennedy at the
+This project was created by Cameron Fitzpatrick and Hunter Kennedy at the  
 University of California, Davis 2020
 
 ## Semaphore API implementation

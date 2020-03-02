@@ -1,3 +1,6 @@
+This project was created by Cameron Fitzpatrick and Hunter Kennedy at the
+University of California, Davis 2020
+
 ## Semaphore API implementation
 We represent our Semaphore with a struct that contains both the count, indicating  
 the number of resources available, and the queue used to store the TID's of the  

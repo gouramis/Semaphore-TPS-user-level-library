@@ -1,16 +1,5 @@
-# ECS 150 Project 3
-
-## Authors
-* Hunter Kennedy (915850099, hjkennedy@ucdavis.edu)
-* Cameron FitzPatrick (914933438, cjfitzpatrick@ucdavis.edu)
-
 ## Semaphore API implementation
-
-Our first decision was to use the given queue.o and thread.o. This is because,  
-we know that there are no errors associated with the queue, and because  
-a lot of the functions we will need are already defined and completed.   
-Our Semaphore implementation uses the queue to store blocked threads. We  
-represent our Semaphore with a struct that contains both the count, indicating  
+We represent our Semaphore with a struct that contains both the count, indicating  
 the number of resources available, and the queue used to store the TID's of the  
 blocked threads.  
 
